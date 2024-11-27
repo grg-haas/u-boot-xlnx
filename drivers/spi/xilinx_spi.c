@@ -259,6 +259,24 @@ static int start_transfer(struct spi_slave *spi, const void *dout, void *din, u3
 	return 0;
 }
 
+int xilinx_spi_xfer(struct udevice *dev, unsigned int bitlen, const void *dout,
+		    void *din, unsigned long flags)
+{
+	int ret;
+	struct spi_slave *slave = dev_get_parent_priv(dev);
+	struct dm_spi_slave_plat *slave_plat = dev_get_parent_plat(dev);
+
+	if (flags & SPI_XFER_BEGIN)
+		spi_cs_activate(dev, slave_plat->cs[0]);
+
+	ret = start_transfer(slave, dout, din, bitlen >> 3);
+
+	if (flags & SPI_XFER_END)
+		spi_cs_deactivate(dev);
+
+	return ret;
+}
+
 static void xilinx_spi_startup_block(struct spi_slave *spi)
 {
 	struct dm_spi_slave_plat *slave_plat =
@@ -430,6 +448,7 @@ static const struct dm_spi_ops xilinx_spi_ops = {
 	.set_speed	= xilinx_spi_set_speed,
 	.set_mode	= xilinx_spi_set_mode,
 	.mem_ops	= &xilinx_spi_mem_ops,
+	.xfer		= &xilinx_spi_xfer
 };
 
 static const struct udevice_id xilinx_spi_ids[] = {
